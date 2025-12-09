@@ -78,7 +78,7 @@ export default function ChatInterface({
                   <div className="message-label">LLM Council</div>
 
                   {/* Stage 1 */}
-                  {msg.loading?.stage1 && (
+                  {msg.loading?.stage1 && !msg.stage1 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
                       <span>Running Stage 1: Collecting individual responses...</span>
@@ -87,7 +87,7 @@ export default function ChatInterface({
                   {msg.stage1 && <Stage1 responses={msg.stage1} />}
 
                   {/* Stage 2 */}
-                  {msg.loading?.stage2 && (
+                  {msg.loading?.stage2 && !msg.stage2 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
                       <span>Running Stage 2: Peer rankings...</span>
@@ -102,7 +102,7 @@ export default function ChatInterface({
                   )}
 
                   {/* Stage 3 */}
-                  {msg.loading?.stage3 && (
+                  {msg.loading?.stage3 && !msg.stage3 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
                       <span>Running Stage 3: Final synthesis...</span>
