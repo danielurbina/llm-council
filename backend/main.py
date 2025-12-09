@@ -1,8 +1,7 @@
 """FastAPI backend for LLM Council."""
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import uuid
@@ -13,20 +12,6 @@ from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
 app = FastAPI(title="LLM Council API")
-
-# Enable CORS for local development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class CreateConversationRequest(BaseModel):
-    """Request to create a new conversation."""
-    pass
 
 
 class SendMessageRequest(BaseModel):
@@ -59,24 +44,52 @@ async def root():
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
 async def list_conversations():
     """List all conversations (metadata only)."""
-    return storage.list_conversations()
+    return JSONResponse(
+        content=storage.list_conversations(),
+        headers={
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
 
 
-@app.post("/api/conversations", response_model=Conversation)
-async def create_conversation(request: CreateConversationRequest):
+@app.options("/api/conversations")
+async def options_create_conversation():
+    """Handle CORS preflight."""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+    )
+
+
+@app.post("/api/conversations")
+async def create_conversation():
     """Create a new conversation."""
     conversation_id = str(uuid.uuid4())
     conversation = storage.create_conversation(conversation_id)
-    return conversation
+    return JSONResponse(
+        content=conversation,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
 
 
-@app.get("/api/conversations/{conversation_id}", response_model=Conversation)
+@app.get("/api/conversations/{conversation_id}")
 async def get_conversation(conversation_id: str):
     """Get a specific conversation with all its messages."""
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return conversation
+    return JSONResponse(
+        content=conversation,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
 
 
 @app.post("/api/conversations/{conversation_id}/message")
@@ -121,6 +134,19 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         "stage3": stage3_result,
         "metadata": metadata
     }
+
+
+@app.options("/api/conversations/{conversation_id}/message/stream")
+async def options_send_message_stream(conversation_id: str):
+    """Handle CORS preflight for message stream."""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+    )
 
 
 @app.post("/api/conversations/{conversation_id}/message/stream")
@@ -190,6 +216,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
         }
     )
 
